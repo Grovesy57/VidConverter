@@ -1,8 +1,14 @@
 import argparse
 import os
+import shlex
 import sys
 import subprocess
 from pathlib import Path
+
+#TODO: Fix and implement batch conversions
+#TODO: Test and verify single conversions
+#TODO: Catch KeyboardInterrupt exceptions
+#TODO: Investigate args.dry not running dry.
 
 supported_formats = ('mp4', 'avi', 'mov', 'mkv', 'webm')
 presets = ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "very slow")
@@ -117,19 +123,43 @@ def convert(filepath, filename):
     # Builds the destination filepath, filename, and appends the format extension.
     output = build_output_path(filename)
 
+    # Test ffmpeg
+    #TODO: Catch errors if ffmpeg fails to verify
+    #TODO: Should only execute once. Here this is executing every convert.
+    _result = subprocess.run(
+        ["ffmpeg", "-version"],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    ffmpeg_vers = _result.stdout.splitlines()[0]
+
+
     # Build the command for ffmpeg
+    if (args.verbose):
+        print()
+        print("ffmpeg tested successfully and returned:")
+        print(ffmpeg_vers)
+        print()
+        _log_level = "warning"
+    else:
+        _log_level = "error"
+
     command = [
 
         "ffmpeg",
+        "-hide_banner",
         "-i", str(filepath),
         "-preset", args.preset,
+        "-loglevel", _log_level,
         "-movflags", "+faststart",
         str(output)
 
     ]
-    if not args.dry():
+
+    if not args.dry:
         try:
-            # Writes the converted image file to the output destination using the original image name.
+            # Writes the converted Video file to the output destination using the original Video name.
             #TODO: Yeah, this is where ffmpeg magic needs to happen.
             subprocess.run(command, check=True)
 
@@ -141,6 +171,7 @@ def convert(filepath, filename):
             print(f"Failed to save the converted Video. Do you have write permissions for the destination directory?")
             raise
     else:
+
         if args.verbose:
             print()
             print("Conversion was skipped due to --dry flag.")
@@ -148,6 +179,9 @@ def convert(filepath, filename):
             print("Conversion details if not for dry run:")
             print(f"Conversion File: {filename}")
             print(f"Output location: {output}")
+            print()
+            print(f"Complete ffmpeg command that was to be parsed:")
+            print(shlex.join(command))
             print()
 
         else:
@@ -184,8 +218,7 @@ def single_convert():
             raise TypeError("Source file is not a supported file type.")
 
     # Now lets convert it
-    if not args.dry:
-        convert(absolute_source, filename)
+    convert(absolute_source, filename)
 
 
 if __name__ == "__main__":
@@ -195,6 +228,11 @@ if __name__ == "__main__":
     absolute_destination = os.path.abspath(args.destination)
 
     if args.verbose:
+        print()
+        print("flag conditions:")
+        print(f"dry run: {args.dry}")
+        print(f"format: {args.format}")
+        print(f"preset: {args.preset}")
         print()
         print(f"Source: {absolute_source}")
         print(f"Destination: {absolute_destination}")
