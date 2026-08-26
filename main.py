@@ -3,12 +3,9 @@ import os
 import shlex
 import sys
 import subprocess
-from pathlib import Path
 
 #TODO: Fix and implement batch conversions
-#TODO: Test and verify single conversions
 #TODO: Catch KeyboardInterrupt exceptions
-#TODO: Investigate args.dry not running dry.
 
 supported_formats = ('mp4', 'avi', 'mov', 'mkv', 'webm')
 presets = ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "very slow")
@@ -123,24 +120,8 @@ def convert(filepath, filename):
     # Builds the destination filepath, filename, and appends the format extension.
     output = build_output_path(filename)
 
-    # Test ffmpeg
-    #TODO: Catch errors if ffmpeg fails to verify
-    #TODO: Should only execute once. Here this is executing every convert.
-    _result = subprocess.run(
-        ["ffmpeg", "-version"],
-        capture_output=True,
-        text=True,
-        check=True
-    )
-    ffmpeg_vers = _result.stdout.splitlines()[0]
-
-
     # Build the command for ffmpeg
     if (args.verbose):
-        print()
-        print("ffmpeg tested successfully and returned:")
-        print(ffmpeg_vers)
-        print()
         _log_level = "warning"
     else:
         _log_level = "error"
@@ -220,8 +201,26 @@ def single_convert():
     # Now lets convert it
     convert(absolute_source, filename)
 
+def test_ffmpeg():
+    # Test ffmpeg
+    # TODO: Catch errors if ffmpeg fails to verify
+    _result = subprocess.run(
+        ["ffmpeg", "-version"],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    ffmpeg_vers = _result.stdout.splitlines()[0]
+
+    if args.verbose:
+        print()
+        print("ffmpeg tested successfully and returned:")
+        print(ffmpeg_vers)
+        print()
 
 if __name__ == "__main__":
+
+    test_ffmpeg()
 
     # Easier and safer to work with absolute paths in a lot of cases.
     absolute_source = os.path.abspath(args.source)
@@ -245,3 +244,6 @@ if __name__ == "__main__":
 
     # Determine whether to execute in batch or single process mode
     single_convert() if not args.batch else batch_convert()
+
+#TODO: Test in an environment without ffmpeg
+#TODO: Test windows support
